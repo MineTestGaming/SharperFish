@@ -1,7 +1,5 @@
 # SharperFish
 
----
-
 A proxy for certain game's score prober written by C#
 
 ## Functions
