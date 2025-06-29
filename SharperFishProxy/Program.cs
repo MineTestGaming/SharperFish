@@ -88,6 +88,7 @@ public class Program
                 byte[] newKey = SHA256.HashData(Encoding.UTF8.GetBytes(decryptedPassword));
                 String currentTime = DateTime.Now.ToString("yyyyMMddHH");
                 byte[] newIv = SHA256.HashData(Encoding.UTF8.GetBytes(currentTime))[..16];
+                privateKeyDict.Remove(loginInfo.username);
                 return AESHelper.Encrypt(cookiesContent, newKey, newIv);
             }
         });
