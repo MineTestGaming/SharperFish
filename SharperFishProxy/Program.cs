@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices.JavaScript;
 using System.Text;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Mvc;
@@ -22,7 +23,7 @@ public class Program
         app.UseCors("CORSPolicy");
         app.MapGet("/", () => "Hello World!");
 
-        app.MapPost("/api/login", async (LoginInfo loginInfo) =>
+        app.MapPost("/api/login", async (LoginInfo loginInfo) => // Login with no encryption
         {
             string decryptedPassword = loginInfo.password;
             HttpClientHandler handler = new HttpClientHandler
@@ -52,25 +53,26 @@ public class Program
             }
         });
         
-        app.MapPost("/api/advanced_login/getKey",async (HttpRequest request) =>
+        app.MapPost("/api/advanced_login/getKey",async (HttpRequest request) => // Generate keys
         {
             using var reader = new StreamReader(request.Body);
             String username = await reader.ReadToEndAsync();
             privateKeyDict.Remove(username);
-            (String publicKey, String privateKey) = RSAHelper.GenerateKey();
-            privateKeyDict.Add(username, privateKey);
-            return publicKey;
+            (String publicKey, String privateKey) = RSAHelper.GenerateKey(); // Generate keys
+            privateKeyDict.Add(username, privateKey); // Save the private key
+            return publicKey; // return the public key
         });
         
-        app.MapPost("/api/advanced_login/login", async (LoginInfo loginInfo) =>
+        app.MapPost("/api/advanced_login/login", async (LoginInfo loginInfo) => // Username is not encrypted as the credential
         {
-            String decryptedPassword = RSAHelper.Decrypt(loginInfo.password, privateKeyDict[loginInfo.username]);
+            // Decrypt the password with private key that saved before
+            String decryptedPassword = RSAHelper.Decrypt(loginInfo.password, privateKeyDict[loginInfo.username]); 
             HttpClientHandler handler = new HttpClientHandler
             {
                 UseCookies = false
             };
             string postData = "{\"username\":\"" + loginInfo.username + "\",\"password\":\"" + decryptedPassword +
-                              "\"}";
+                              "\"}"; // Process the JSON that needs to be sent
             using (HttpClient http = new HttpClient(handler))
             {
                 string url = "https://www.diving-fish.com/api/maimaidxprober/login";
@@ -79,8 +81,11 @@ public class Program
                 response.Headers.TryGetValues("Set-Cookie", out var cookies);
                 if (!(cookies != null && cookies.First().Contains("jwt_token"))) return "Failed";
                 string cookiesContent = cookies.First().Split(';').First(x => x.Contains("jwt_token")).Split('=')[1];
+                
+                // Encrypt the cookie with the password
                 byte[] newKey = SHA256.HashData(Encoding.UTF8.GetBytes(decryptedPassword));
-                byte[] newIv = SHA256.HashData(newKey)[..16];
+                String currentTime = DateTime.Now.ToString("yyyyMMddHH");
+                byte[] newIv = SHA256.HashData(Encoding.UTF8.GetBytes(currentTime))[..16];
                 return AESHelper.Encrypt(cookiesContent, newKey, newIv);
             }
         });

@@ -21,21 +21,26 @@ class Program
             UseCookies = false
         };
 
+        // Get the public key
         using HttpClient client = new();
         Uri requestKeyUri = new Uri($"{serverAddress}/api/advanced_login/getKey");
         StringContent requestContent = new(loginInfo.username, Encoding.UTF8, "text/plain");
         StreamReader reader = new StreamReader(client.PostAsync(requestKeyUri, requestContent).Result.Content.ReadAsStream());
         String key = reader.ReadToEnd();
+        // Encrypt the password
         String ogPassword = loginInfo.password;
         loginInfo.password = RSAHelper.Encrypt(loginInfo.password, key);
         
+        // Sending encrypted password with username to the server to get encrypted cookie
         Uri postUri = new Uri($"{serverAddress}/api/advanced_login/login");
         StringContent content = new StringContent(JsonSerializer.Serialize(loginInfo), Encoding.UTF8, "application/json");
         StreamReader passwordReader =
             new StreamReader(client.PostAsync(postUri, content).Result.Content.ReadAsStream());
         String response = passwordReader.ReadToEnd();
+        // Decrypting the cookie with password
         byte[] decKey = SHA256.HashData(Encoding.UTF8.GetBytes(ogPassword));
-        byte[] decIv = SHA256.HashData(decKey)[..16];
+        String currentTime = DateTime.Now.ToString("yyyyMMddHH");
+        byte[] decIv = SHA256.HashData(Encoding.UTF8.GetBytes(currentTime))[..16];
         
         Console.WriteLine(AESHelper.Decrypt(response, decKey, decIv));
     }
