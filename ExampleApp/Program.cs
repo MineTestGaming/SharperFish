@@ -37,7 +37,7 @@ class Program
         StreamReader passwordReader =
             new StreamReader(client.PostAsync(postUri, content).Result.Content.ReadAsStream());
         String response = passwordReader.ReadToEnd();
-        // Decrypting the cookie with password
+        // Decrypting the cookie with password and time
         byte[] decKey = SHA256.HashData(Encoding.UTF8.GetBytes(ogPassword));
         String currentTime = DateTime.Now.ToString("yyyyMMddHH");
         byte[] decIv = SHA256.HashData(Encoding.UTF8.GetBytes(currentTime))[..16];

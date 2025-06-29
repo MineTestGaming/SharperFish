@@ -82,7 +82,7 @@ public class Program
                 if (!(cookies != null && cookies.First().Contains("jwt_token"))) return "Failed";
                 string cookiesContent = cookies.First().Split(';').First(x => x.Contains("jwt_token")).Split('=')[1];
                 
-                // Encrypt the cookie with the password
+                // Encrypt the cookie with the password and current time's SHA256
                 byte[] newKey = SHA256.HashData(Encoding.UTF8.GetBytes(decryptedPassword));
                 String currentTime = DateTime.Now.ToString("yyyyMMddHH");
                 byte[] newIv = SHA256.HashData(Encoding.UTF8.GetBytes(currentTime))[..16];
