@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices.JavaScript;
 using System.Text;
 using System.Security.Cryptography;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 
 namespace SharperFishProxy;
@@ -65,6 +66,7 @@ public class Program
         
         app.MapPost("/api/advanced_login/login", async (LoginInfo loginInfo) => // Username is not encrypted as the credential
         {
+            if (!privateKeyDict.ContainsKey(loginInfo.username)) return "{\"message\": \"No private key available\"}"; // Error processing
             // Decrypt the password with private key that saved before
             String decryptedPassword = RSAHelper.Decrypt(loginInfo.password, privateKeyDict[loginInfo.username]); 
             HttpClientHandler handler = new HttpClientHandler
@@ -157,4 +159,14 @@ public class Program
         public string username { get; set; } = string.Empty;
         public string password { get; set; } = string.Empty;
     }
+
+    public class Msg
+    {
+        public required string Message;
+
+        public Msg(string message)
+        {
+            Message = message;
+        }
+    } 
 }
