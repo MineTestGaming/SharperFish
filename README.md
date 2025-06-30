@@ -8,6 +8,8 @@ A proxy for certain game's score prober written by C#
 
 - Encryption for password and jwt_token while connecting between client and proxy
 
+- [Out of the box serverless function compute implement](https://github.com/MineTestGaming/SharperFishFC)
+
 ## API Reference
 
 - ``POST /api/advanced_login/getKey`` - Generate a new key pair and get the public key for authenication
