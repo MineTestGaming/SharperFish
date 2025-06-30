@@ -86,7 +86,7 @@ public class Program
                 
                 // Encrypt the cookie with the password and current time's SHA256
                 byte[] newKey = SHA256.HashData(Encoding.UTF8.GetBytes(decryptedPassword));
-                String currentTime = DateTime.Now.ToString("yyyyMMddHH");
+                String currentTime = DateTime.UtcNow.ToString("yyyyMMddHH");
                 byte[] newIv = SHA256.HashData(Encoding.UTF8.GetBytes(currentTime))[..16];
                 privateKeyDict.Remove(loginInfo.username);
                 return AESHelper.Encrypt(cookiesContent, newKey, newIv);
