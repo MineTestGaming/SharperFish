@@ -144,14 +144,14 @@ public class Program
         {
             using RSA rsa = RSA.Create();
             rsa.ImportSubjectPublicKeyInfo(Convert.FromBase64String(publicKey), out _);
-            return Convert.ToBase64String(rsa.Encrypt(Encoding.UTF8.GetBytes(input), RSAEncryptionPadding.Pkcs1));
+            return Convert.ToBase64String(rsa.Encrypt(Encoding.UTF8.GetBytes(input), RSAEncryptionPadding.OaepSHA256));
         }
         
         public static string Decrypt(string input, string privateKey)
         {
             using RSA rsa = RSA.Create();
             rsa.ImportPkcs8PrivateKey(Convert.FromBase64String(privateKey), out _);
-            return Encoding.UTF8.GetString(rsa.Decrypt(Convert.FromBase64String(input), RSAEncryptionPadding.Pkcs1));
+            return Encoding.UTF8.GetString(rsa.Decrypt(Convert.FromBase64String(input), RSAEncryptionPadding.OaepSHA256));
         }
     }
 
