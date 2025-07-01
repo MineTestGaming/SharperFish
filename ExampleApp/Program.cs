@@ -70,7 +70,7 @@ class Program
         jwtPubKey = jwtPubKeyReader.ReadToEnd();
         encryptedJwt = RSAHelper.Encrypt(jwtToken, jwtPubKey);
         ProfileBundle bundle = new ProfileBundle();
-        bundle.Authenication = new EncryptBundle(loginInfo.username, encryptedJwt);
+        bundle.Authentication = new EncryptBundle(loginInfo.username, encryptedJwt);
         bundle.Data.Add("privacy", AnsiConsole.Prompt(new TextPrompt<bool>("Do you want to hide your score to other?")
             .AddChoices([true, false])
             .DefaultValue(true)
@@ -161,7 +161,7 @@ class Program
 
     public class ProfileBundle
     {
-        public EncryptBundle Authenication { get; set; }
+        public EncryptBundle Authentication { get; set; }
         public Dictionary<string, object> Data { get; set; } = new();
     }
 }

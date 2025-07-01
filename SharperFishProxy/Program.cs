@@ -126,8 +126,8 @@ public class Program
         {
             try
             {
-                string decryptedJwtToken = RSAHelper.Decrypt(profile.Authenication.encryptedContent,
-                    privateKeyDict[profile.Authenication.username]); // Decrypt the jwt_token
+                string decryptedJwtToken = RSAHelper.Decrypt(profile.Authentication.encryptedContent,
+                    privateKeyDict[profile.Authentication.username]); // Decrypt the jwt_token
 
                 // Set the cookie and associate it into handler
                 CookieContainer cookieContainer = new CookieContainer();
@@ -145,7 +145,7 @@ public class Program
                 using HttpClient client = new HttpClient(handler);
                 StringContent content = new(JsonSerializer.Serialize(verifiedData), Encoding.UTF8, "application/json");
                 var response = await client.PostAsync($"{divingFishAddress}/api/maimaidxprober/player/profile", content);
-                privateKeyDict.Remove(profile.Authenication.username);
+                privateKeyDict.Remove(profile.Authentication.username);
                 return await new StreamReader(await response.Content.ReadAsStreamAsync()).ReadToEndAsync();
             }
             catch (Exception exception)
@@ -230,7 +230,7 @@ public class Program
 
     public class ProfileBundle
     {
-        public EncryptBundle Authenication { get; set; }
+        public EncryptBundle Authentication { get; set; }
         public Dictionary<string, object> Data { get; set; } = new();
     }
 
