@@ -58,7 +58,7 @@ A proxy for certain game's score prober written by C#
   ```json
   {
       "username": "username",
-      "encryptedData": "jwt_token_with_encrypted"
+      "encryptedContent": "jwt_token_with_encrypted"
   }
   ```
   
@@ -79,7 +79,3 @@ A proxy for certain game's score prober written by C#
       "username":"Diving-Fish Username"
   }
   ```
-
-```
-
-```
