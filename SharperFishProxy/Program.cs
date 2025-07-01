@@ -1,8 +1,10 @@
+using System.Net;
 using System.Runtime.InteropServices.JavaScript;
 using System.Text;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+// ReSharper disable PossibleMultipleEnumeration
 
 namespace SharperFishProxy;
 
@@ -19,7 +21,7 @@ public class Program
                 policyBuilder => { policyBuilder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod(); });
         });
         var app = builder.Build();
-
+        string divingFishAddress = "https://www.diving-fish.com";
 
         app.UseCors("CORSPolicy");
         app.MapGet("/", () => "Hello World!");
@@ -35,7 +37,7 @@ public class Program
                               "\"}";
             using (HttpClient http = new HttpClient(handler))
             {
-                string url = "https://www.diving-fish.com/api/maimaidxprober/login";
+                string url = $"{divingFishAddress}/api/maimaidxprober/login";
                 var content = new StringContent(postData, Encoding.UTF8, "application/json");
                 var response = await http.PostAsync(url, content);
                 response.Headers.TryGetValues("Set-Cookie", out var cookies);
@@ -93,6 +95,27 @@ public class Program
             }
         });
 
+        app.MapPost("/api/profile", async (EncryptBundle bundle) =>
+        {
+            Console.WriteLine(bundle.username);
+            // Decrypt the jwt_token
+            string decryptedData = RSAHelper.Decrypt(bundle.encryptedContent, privateKeyDict[bundle.username]);
+            
+            // Set the cookie
+            CookieContainer cookieContainer = new CookieContainer();
+            cookieContainer.Add(new Uri(divingFishAddress), new Cookie("jwt_token", decryptedData));
+            HttpClientHandler handler = new HttpClientHandler
+            {
+                CookieContainer = cookieContainer
+            };
+            
+            // Get the data from diving fish
+            using HttpClient client = new HttpClient(handler);
+            string uri = $"{divingFishAddress}/api/maimaidxprober/player/profile";
+            var response = await client.GetAsync(uri);
+            using StreamReader reader = new StreamReader( await response.Content.ReadAsStreamAsync());
+            return await reader.ReadToEndAsync();
+        });
         app.Run();
     }
 
@@ -159,6 +182,12 @@ public class Program
     {
         public string username { get; set; } = string.Empty;
         public string password { get; set; } = string.Empty;
+    }
+
+    public class EncryptBundle
+    {
+        public string username { get; set; }
+        public string encryptedContent { get; set; }
     }
 
     public class Msg

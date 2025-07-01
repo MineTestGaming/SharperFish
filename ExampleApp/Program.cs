@@ -41,8 +41,25 @@ class Program
         byte[] decKey = SHA256.HashData(Encoding.UTF8.GetBytes(ogPassword));
         String currentTime = DateTime.UtcNow.ToString("yyyyMMddHH");
         byte[] decIv = SHA256.HashData(Encoding.UTF8.GetBytes(currentTime))[..16];
+
+        string jwtToken = AESHelper.Decrypt(response, decKey, decIv);
+        Console.WriteLine(jwtToken);
         
-        Console.WriteLine(AESHelper.Decrypt(response, decKey, decIv));
+        // Get the new public key for jwt_token
+        var jwtPubKeyResponse = client.PostAsync(requestKeyUri, requestContent);
+        StreamReader jwtPubKeyReader = new StreamReader(jwtPubKeyResponse.Result.Content.ReadAsStream());
+        String jwtPubKey = jwtPubKeyReader.ReadToEnd();
+        // Encrypt JwtToken
+        String encryptedJwt = RSAHelper.Encrypt(jwtToken, jwtPubKey);
+        // Sending data to the server
+        string profileUri = $"{serverAddress}/api/profile";
+        EncryptBundle encryptedProfileFetch = new EncryptBundle(loginInfo.username, encryptedJwt);
+        StringContent encryptedProfileContent = new StringContent(JsonSerializer.Serialize(encryptedProfileFetch), Encoding.UTF8, "application/json");
+        var fetchedData = client.PostAsync(profileUri, encryptedProfileContent);
+        // Process the fetched data
+        StreamReader profileReader = new StreamReader(fetchedData.Result.Content.ReadAsStream());
+        String profileData = profileReader.ReadToEnd();
+        Console.WriteLine(profileData);
     }
     
     public static class RSAHelper
@@ -108,5 +125,17 @@ class Program
     {
         public string username { get; set; } = string.Empty;
         public string password { get; set; } = string.Empty;
+    }
+    
+    public class EncryptBundle
+    {
+        public string username { get; set; }
+        public string encryptedContent { get; set; }
+
+        public EncryptBundle(string username, string encryptedContent)
+        {
+            this.username = username;
+            this.encryptedContent = encryptedContent;
+        }
     }
 }
