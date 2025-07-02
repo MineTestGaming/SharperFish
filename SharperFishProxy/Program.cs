@@ -62,7 +62,7 @@ public class Program
             using var reader = new StreamReader(request.Body);
             String username = await reader.ReadToEndAsync();
             privateKeyDict.Remove(username);
-            (String publicKey, String privateKey) = RSAHelper.GenerateKey(); // Generate keys
+            (String publicKey, String privateKey) = EncryptHelper.RSAHelper.GenerateKey(); // Generate keys
             privateKeyDict.Add(username, privateKey); // Save the private key
             return publicKey; // return the public key
         });
@@ -73,7 +73,7 @@ public class Program
                 if (!privateKeyDict.ContainsKey(loginInfo.username))
                     return "{\"message\": \"No private key available\"}"; // Error processing
                 // Decrypt the password with private key that saved before
-                String decryptedPassword = RSAHelper.Decrypt(loginInfo.password, privateKeyDict[loginInfo.username]);
+                String decryptedPassword = EncryptHelper.RSAHelper.Decrypt(loginInfo.password, privateKeyDict[loginInfo.username]);
                 HttpClientHandler handler = new HttpClientHandler
                 {
                     UseCookies = false
@@ -95,7 +95,7 @@ public class Program
                     String currentTime = DateTime.UtcNow.ToString("yyyyMMddHH");
                     byte[] newIv = SHA256.HashData(Encoding.UTF8.GetBytes(currentTime))[..16];
                     privateKeyDict.Remove(loginInfo.username);
-                    return AESHelper.Encrypt(cookiesContent, newKey, newIv);
+                    return EncryptHelper.AESHelper.Encrypt(cookiesContent, newKey, newIv);
                 }
             });
 
@@ -103,7 +103,7 @@ public class Program
         {
             Console.WriteLine(bundle.username);
             // Decrypt the jwt_token
-            string decryptedData = RSAHelper.Decrypt(bundle.encryptedContent, privateKeyDict[bundle.username]);
+            string decryptedData = EncryptHelper.RSAHelper.Decrypt(bundle.encryptedContent, privateKeyDict[bundle.username]);
 
             // Set the cookie
             CookieContainer cookieContainer = new CookieContainer();
@@ -126,7 +126,7 @@ public class Program
         {
             try
             {
-                string decryptedJwtToken = RSAHelper.Decrypt(profile.Authentication.encryptedContent,
+                string decryptedJwtToken = EncryptHelper.RSAHelper.Decrypt(profile.Authentication.encryptedContent,
                     privateKeyDict[profile.Authentication.username]); // Decrypt the jwt_token
 
                 // Set the cookie and associate it into handler
@@ -153,67 +153,23 @@ public class Program
                 return "{Message: " + exception + " }";
             }
         });
-        app.Run();
-    }
 
-    public static class AESHelper
-    {
-        public static string Encrypt(string input, byte[] key, byte[] iv)
+        app.MapPost("/api/getRecords", async (EncryptBundle bundle) =>
         {
-            using Aes aes = Aes.Create();
-            aes.Key = key;
-            aes.IV = iv;
-            ICryptoTransform transform = aes.CreateEncryptor(); // 创建Transform Encryptor
-            string result = String.Empty; // 存储Result
-
-            using MemoryStream ms = new MemoryStream(); // 创建MemoryStream以使用内存空间并提供给CryptoStream
-            using CryptoStream cs = new CryptoStream(ms, transform, CryptoStreamMode.Write); // 创建CryptoStream
-            using (StreamWriter writer = new(cs)) // 将CryptoStream中的内容使用StreamWriter写入
+            string decryptedJwtToken = EncryptHelper.RSAHelper.Decrypt(bundle.encryptedContent,
+                privateKeyDict[bundle.username]);
+            CookieContainer container = new CookieContainer();
+            container.Add(new Uri(divingFishAddress), new Cookie("jwt_token", decryptedJwtToken));
+            HttpClientHandler handler = new HttpClientHandler
             {
-                writer.Write(input);
-            }
+                CookieContainer = container
+            };
+            
+            using HttpClient client = new HttpClient(handler);
+            return await new StreamReader(await client.GetStreamAsync($"{divingFishAddress}/api/maimaidxprober/player/records")).ReadToEndAsync();
 
-            return Convert.ToBase64String(ms.ToArray()); // 使用Base64编码
-        }
-
-        public static string Decrypt(string input, byte[] key, byte[] iv)
-        {
-            using Aes aes = Aes.Create();
-            aes.Key = key;
-            aes.IV = iv;
-            ICryptoTransform transform = aes.CreateDecryptor();
-
-            using MemoryStream ms = new MemoryStream(Convert.FromBase64String(input));
-            using CryptoStream cs = new CryptoStream(ms, transform, CryptoStreamMode.Read);
-            using StreamReader reader = new(cs);
-            return reader.ReadToEnd();
-        }
-    }
-
-    public static class RSAHelper
-    {
-        public static (string publicKey, string privateKey) GenerateKey()
-        {
-            using RSA rsa = RSA.Create();
-            string publicKey = Convert.ToBase64String(rsa.ExportSubjectPublicKeyInfo());
-            string privateKey = Convert.ToBase64String(rsa.ExportPkcs8PrivateKey());
-            return (publicKey, privateKey);
-        }
-
-        public static string Encrypt(string input, string publicKey)
-        {
-            using RSA rsa = RSA.Create();
-            rsa.ImportSubjectPublicKeyInfo(Convert.FromBase64String(publicKey), out _);
-            return Convert.ToBase64String(rsa.Encrypt(Encoding.UTF8.GetBytes(input), RSAEncryptionPadding.OaepSHA256));
-        }
-
-        public static string Decrypt(string input, string privateKey)
-        {
-            using RSA rsa = RSA.Create();
-            rsa.ImportPkcs8PrivateKey(Convert.FromBase64String(privateKey), out _);
-            return Encoding.UTF8.GetString(
-                rsa.Decrypt(Convert.FromBase64String(input), RSAEncryptionPadding.OaepSHA256));
-        }
+        });
+        app.Run();
     }
 
     public class LoginInfo
