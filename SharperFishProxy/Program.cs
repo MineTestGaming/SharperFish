@@ -1,9 +1,7 @@
 using System.Net;
-using System.Runtime.InteropServices.JavaScript;
-using System.Text;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
-using Microsoft.AspNetCore.Mvc;
 
 // ReSharper disable PossibleMultipleEnumeration
 
@@ -73,7 +71,8 @@ public class Program
                 if (!privateKeyDict.ContainsKey(loginInfo.username))
                     return "{\"message\": \"No private key available\"}"; // Error processing
                 // Decrypt the password with private key that saved before
-                String decryptedPassword = EncryptHelper.RSAHelper.Decrypt(loginInfo.password, privateKeyDict[loginInfo.username]);
+                String decryptedPassword =
+                    EncryptHelper.RSAHelper.Decrypt(loginInfo.password, privateKeyDict[loginInfo.username]);
                 HttpClientHandler handler = new HttpClientHandler
                 {
                     UseCookies = false
@@ -103,7 +102,8 @@ public class Program
         {
             Console.WriteLine(bundle.username);
             // Decrypt the jwt_token
-            string decryptedData = EncryptHelper.RSAHelper.Decrypt(bundle.encryptedContent, privateKeyDict[bundle.username]);
+            string decryptedData =
+                EncryptHelper.RSAHelper.Decrypt(bundle.encryptedContent, privateKeyDict[bundle.username]);
 
             // Set the cookie
             CookieContainer cookieContainer = new CookieContainer();
@@ -144,7 +144,16 @@ public class Program
                 // Send the request to the server
                 using HttpClient client = new HttpClient(handler);
                 StringContent content = new(JsonSerializer.Serialize(verifiedData), Encoding.UTF8, "application/json");
-                var response = await client.PostAsync($"{divingFishAddress}/api/maimaidxprober/player/profile", content);
+                HttpResponseMessage response;
+                
+                // Special process for agreement agree
+                if (profile.Data.ContainsKey("agreement_agree") && profile.Data.Count == 1)
+                    response = await client.PutAsync($"{divingFishAddress}/api/maimaidxprober/player/agreement",
+                        content);
+                else
+                // Normal process for others data post
+                    response = await client.PostAsync($"{divingFishAddress}/api/maimaidxprober/player/profile",
+                        content);
                 privateKeyDict.Remove(profile.Authentication.username);
                 return await new StreamReader(await response.Content.ReadAsStreamAsync()).ReadToEndAsync();
             }
@@ -164,10 +173,27 @@ public class Program
             {
                 CookieContainer = container
             };
-            
-            using HttpClient client = new HttpClient(handler);
-            return await new StreamReader(await client.GetStreamAsync($"{divingFishAddress}/api/maimaidxprober/player/records")).ReadToEndAsync();
 
+            using HttpClient client = new HttpClient(handler);
+            return await new StreamReader(
+                await client.GetStreamAsync($"{divingFishAddress}/api/maimaidxprober/player/records")).ReadToEndAsync();
+        });
+
+        app.MapPost("/api/refreshImportToken", async (EncryptBundle bundle) =>
+        {
+            string decryptedJwtToken = EncryptHelper.RSAHelper.Decrypt(bundle.encryptedContent,
+                privateKeyDict[bundle.username]);
+            CookieContainer container = new CookieContainer();
+            container.Add(new Uri(divingFishAddress), new Cookie("jwt_token", decryptedJwtToken));
+            HttpClientHandler handler = new HttpClientHandler
+            {
+                CookieContainer = container
+            };
+
+            using HttpClient client = new HttpClient(handler);
+            return await new StreamReader(
+                    await client.GetStreamAsync($"{divingFishAddress}/api/maimaidxprober/player/import_token"))
+                .ReadToEndAsync();
         });
         app.Run();
     }
