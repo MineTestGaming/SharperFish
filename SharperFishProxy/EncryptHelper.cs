@@ -5,7 +5,7 @@ namespace SharperFishProxy;
 
 public class EncryptHelper
 {
-        public static class AESHelper
+    public static class AESHelper
     {
         public static string Encrypt(string input, byte[] key, byte[] iv)
         {

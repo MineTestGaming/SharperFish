@@ -21,6 +21,9 @@ public class Program
         });
         var app = builder.Build();
         string divingFishAddress = "https://www.diving-fish.com";
+        string aliasProxy = "ALIAS_PROXY_URL";
+
+        string jsonProxy = "JSON_PROXY_URL";
 
         app.UseCors("CORSPolicy");
         app.MapGet("/", () => "Hello World!");
@@ -145,13 +148,13 @@ public class Program
                 using HttpClient client = new HttpClient(handler);
                 StringContent content = new(JsonSerializer.Serialize(verifiedData), Encoding.UTF8, "application/json");
                 HttpResponseMessage response;
-                
+
                 // Special process for agreement agree
                 if (profile.Data.ContainsKey("agreement_agree") && profile.Data.Count == 1)
                     response = await client.PutAsync($"{divingFishAddress}/api/maimaidxprober/player/agreement",
                         content);
                 else
-                // Normal process for others data post
+                    // Normal process for others data post
                     response = await client.PostAsync($"{divingFishAddress}/api/maimaidxprober/player/profile",
                         content);
                 privateKeyDict.Remove(profile.Authentication.username);
@@ -176,7 +179,8 @@ public class Program
 
             using HttpClient client = new HttpClient(handler);
             return await new StreamReader(
-                await client.GetStreamAsync($"{divingFishAddress}/api/maimaidxprober/player/records")).ReadToEndAsync();
+                await client.GetStreamAsync($"{divingFishAddress}/api/maimaidxprober/player/records"))
+                .ReadToEndAsync();
         });
 
         app.MapPost("/api/refreshImportToken", async (EncryptBundle bundle) =>
@@ -193,6 +197,22 @@ public class Program
             using HttpClient client = new HttpClient(handler);
             return await new StreamReader(
                     await client.GetStreamAsync($"{divingFishAddress}/api/maimaidxprober/player/import_token"))
+                .ReadToEndAsync();
+        });
+
+        app.MapGet("/api/json/{json}", async (string json) =>
+        {
+            HttpClient client = new HttpClient();
+
+            return new StreamReader(await client.GetAsync($"{jsonProxy}{json}").Result.Content.ReadAsStreamAsync())
+                .ReadToEndAsync();
+        });
+
+        app.MapPost("/api/alias", async () =>
+        {
+            HttpClient client = new HttpClient();
+
+            return new StreamReader(await client.GetAsync($"{aliasProxy}").Result.Content.ReadAsStreamAsync())
                 .ReadToEndAsync();
         });
         app.Run();
